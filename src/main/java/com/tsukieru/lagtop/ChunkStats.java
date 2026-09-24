@@ -12,15 +12,16 @@ public final class ChunkStats {
     private volatile long recentPistonEvents;
     private volatile long recentHopperMoves;
 
-    private volatile int entities;
+    private volatile int livingEntities;
+    private volatile int passiveEntities;
     private volatile int redstoneBlocks;
     private volatile int pistons;
     private volatile int hoppers;
     private volatile int observers;
     private volatile long lastScanNanos;
 
-    public void addRedstoneEvent() {
-        redstoneEvents.incrementAndGet();
+    public void addRedstoneEvent(long amount) {
+        redstoneEvents.addAndGet(amount);
     }
 
     public void addPistonEvent() {
@@ -62,8 +63,9 @@ public final class ChunkStats {
         return recentHopperMoves;
     }
 
-    public void updateScan(int entities, int redstoneBlocks, int pistons, int hoppers, int observers) {
-        this.entities = entities;
+    public void updateScan(int livingEntities, int passiveEntities, int redstoneBlocks, int pistons, int hoppers, int observers) {
+        this.livingEntities = livingEntities;
+        this.passiveEntities = passiveEntities;
         this.redstoneBlocks = redstoneBlocks;
         this.pistons = pistons;
         this.hoppers = hoppers;
@@ -71,8 +73,12 @@ public final class ChunkStats {
         this.lastScanNanos = System.nanoTime();
     }
 
-    public int entities() {
-        return entities;
+    public int livingEntities() {
+        return livingEntities;
+    }
+
+    public int passiveEntities() {
+        return passiveEntities;
     }
 
     public int redstoneBlocks() {

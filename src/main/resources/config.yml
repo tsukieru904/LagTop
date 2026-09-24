@@ -11,11 +11,17 @@ weights:
   redstone-events: 1.0
   piston-events: 6.0
   hopper-moves: 3.0
-  entities: 0.20
+  # Living entities (mobs, villagers, minecarts...) cost real tick time; weight them higher.
+  living-entities: 0.50
+  # Item drops / XP orbs are cheap to tick; weight them much lower so they don't dominate the ranking.
+  passive-entities: 0.02
   redstone-blocks: 0.03
   pistons: 0.50
   hoppers: 0.35
   observers: 0.35
+  # BlockRedstoneEvent fires on every power-level change and can itself become a lag source
+  # if counted one-by-one. Only 1 in N events is recorded, then multiplied back up by N.
+  redstone-sample-rate: 4
 
 # Materials counted as redstone components.
 # Names that do not exist on the running server are ignored.

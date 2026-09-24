@@ -123,7 +123,8 @@ public final class LagTopMenu implements InventoryHolder {
                 line("Chunk Z: " + selected.key().z()),
                 line("區塊座標: [" + selected.key().x() + ", " + selected.key().z() + "]")));
 
-        inventory.setItem(10, counterItem(Material.PLAYER_HEAD, "實體", NamedTextColor.WHITE, selected.entities()));
+        inventory.setItem(9, counterItem(Material.ZOMBIE_HEAD, "生物", NamedTextColor.WHITE, selected.livingEntities()));
+        inventory.setItem(10, counterItem(Material.PLAYER_HEAD, "掉落物/經驗球", NamedTextColor.WHITE, selected.passiveEntities()));
         inventory.setItem(11, counterItem(Material.REDSTONE_BLOCK, "紅石元件", NamedTextColor.RED, selected.redstoneBlocks()));
         inventory.setItem(12, counterItem(Material.PISTON, "活塞", NamedTextColor.YELLOW, selected.pistons()));
         inventory.setItem(13, counterItem(Material.HOPPER, "漏斗", NamedTextColor.GRAY, selected.hoppers()));
@@ -155,7 +156,8 @@ public final class LagTopMenu implements InventoryHolder {
                 rank == 1 ? NamedTextColor.RED : NamedTextColor.AQUA,
                 line("Chunk: [" + snapshot.key().x() + ", " + snapshot.key().z() + "]"),
                 line(String.format(Locale.ROOT, "Lag Score: %.1f", snapshot.score())),
-                line("實體: " + snapshot.entities()),
+                line("生物: " + snapshot.livingEntities()),
+                line("掉落物: " + snapshot.passiveEntities()),
                 line("紅石: " + snapshot.redstoneBlocks()),
                 line("活塞: " + snapshot.pistons()),
                 line("漏斗: " + snapshot.hoppers()),
@@ -188,6 +190,9 @@ public final class LagTopMenu implements InventoryHolder {
     private static ItemStack item(Material material, String name, NamedTextColor color, Component... lore) {
         ItemStack stack = new ItemStack(material);
         ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            return stack;
+        }
         meta.displayName(Component.text(name, color, TextDecoration.BOLD));
         if (lore.length > 0) {
             List<Component> lines = new ArrayList<>(List.of(lore));

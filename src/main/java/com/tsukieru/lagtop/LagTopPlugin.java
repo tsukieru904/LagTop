@@ -72,13 +72,15 @@ public final class LagTopPlugin extends JavaPlugin implements Listener {
         double redstoneEvents = weights == null ? 1.0 : weights.getDouble("redstone-events", 1.0);
         double pistonEvents = weights == null ? 6.0 : weights.getDouble("piston-events", 6.0);
         double hopperMoves = weights == null ? 3.0 : weights.getDouble("hopper-moves", 3.0);
-        double entities = weights == null ? 0.20 : weights.getDouble("entities", 0.20);
+        double livingEntities = weights == null ? 0.50 : weights.getDouble("living-entities", 0.50);
+        double passiveEntities = weights == null ? 0.02 : weights.getDouble("passive-entities", 0.02);
         double redstoneBlocks = weights == null ? 0.03 : weights.getDouble("redstone-blocks", 0.03);
         double pistons = weights == null ? 0.50 : weights.getDouble("pistons", 0.50);
         double hoppers = weights == null ? 0.35 : weights.getDouble("hoppers", 0.35);
         double observers = weights == null ? 0.35 : weights.getDouble("observers", 0.35);
         long retention = Math.max(30L, getConfig().getLong("retention-seconds", 120L));
         double activityDecay = getConfig().getDouble("activity-decay", 0.5);
+        int redstoneSampleRate = Math.max(1, getConfig().getInt("weights.redstone-sample-rate", 4));
 
         HashSet<Material> redstoneMaterials = new HashSet<>();
         for (String name : getConfig().getStringList("redstone-materials")) {
@@ -90,8 +92,9 @@ public final class LagTopPlugin extends JavaPlugin implements Listener {
             redstoneMaterials.add(material);
         }
 
-        profiler.configure(redstoneEvents, pistonEvents, hopperMoves, entities, redstoneBlocks,
-                pistons, hoppers, observers, retention, activityDecay, redstoneMaterials);
+        profiler.configure(redstoneEvents, pistonEvents, hopperMoves, livingEntities, passiveEntities,
+                redstoneBlocks, pistons, hoppers, observers, retention, activityDecay,
+                redstoneSampleRate, redstoneMaterials);
     }
 
     public void triggerFullKnownScan() {
@@ -149,7 +152,8 @@ public final class LagTopPlugin extends JavaPlugin implements Listener {
                     .append(Component.text(" [" + s.key().x() + ", " + s.key().z() + "] ", NamedTextColor.GRAY))
                     .append(Component.text(String.format(Locale.ROOT, "Score %.1f", s.score()), NamedTextColor.RED));
             sender.sendMessage(header);
-            sender.sendMessage(Component.text("  實體 ", NamedTextColor.GRAY).append(Component.text(String.valueOf(s.entities()), NamedTextColor.WHITE))
+            sender.sendMessage(Component.text("  生物 ", NamedTextColor.GRAY).append(Component.text(String.valueOf(s.livingEntities()), NamedTextColor.WHITE))
+                    .append(Component.text(" | 掉落物 ", NamedTextColor.GRAY)).append(Component.text(String.valueOf(s.passiveEntities()), NamedTextColor.WHITE))
                     .append(Component.text(" | 紅石 ", NamedTextColor.GRAY)).append(Component.text(String.valueOf(s.redstoneBlocks()), NamedTextColor.WHITE))
                     .append(Component.text(" | 活塞 ", NamedTextColor.GRAY)).append(Component.text(String.valueOf(s.pistons()), NamedTextColor.WHITE))
                     .append(Component.text(" | 漏斗 ", NamedTextColor.GRAY)).append(Component.text(String.valueOf(s.hoppers()), NamedTextColor.WHITE))

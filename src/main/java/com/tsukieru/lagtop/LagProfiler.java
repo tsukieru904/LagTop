@@ -22,17 +22,21 @@ public final class LagProfiler {
     private final ConcurrentMap<ChunkKey, Boolean> loaded = new ConcurrentHashMap<>();
     private final AtomicInteger cursor = new AtomicInteger();
     private final AtomicLong scans = new AtomicLong();
+    private final AtomicLong redstoneSampleCounter = new AtomicLong();
+    private final AtomicInteger scanRounds = new AtomicInteger();
 
     private volatile double redstoneWeight;
     private volatile double pistonEventWeight;
     private volatile double hopperMoveWeight;
-    private volatile double entityWeight;
+    private volatile double livingEntityWeight;
+    private volatile double passiveEntityWeight;
     private volatile double redstoneBlockWeight;
     private volatile double pistonBlockWeight;
     private volatile double hopperBlockWeight;
     private volatile double observerWeight;
     private volatile long retentionNanos;
     private volatile double activityDecay = 0.5;
+    private volatile int redstoneSampleRate = 1;
     private volatile HashSet<Material> redstoneMaterials = new HashSet<>();
 
     public LagProfiler(Plugin plugin) {
@@ -42,24 +46,28 @@ public final class LagProfiler {
     public void configure(double redstoneWeight,
                           double pistonEventWeight,
                           double hopperMoveWeight,
-                          double entityWeight,
+                          double livingEntityWeight,
+                          double passiveEntityWeight,
                           double redstoneBlockWeight,
                           double pistonBlockWeight,
                           double hopperBlockWeight,
                           double observerWeight,
                           long retentionSeconds,
                           double activityDecay,
+                          int redstoneSampleRate,
                           HashSet<Material> redstoneMaterials) {
         this.redstoneWeight = redstoneWeight;
         this.pistonEventWeight = pistonEventWeight;
         this.hopperMoveWeight = hopperMoveWeight;
-        this.entityWeight = entityWeight;
+        this.livingEntityWeight = livingEntityWeight;
+        this.passiveEntityWeight = passiveEntityWeight;
         this.redstoneBlockWeight = redstoneBlockWeight;
         this.pistonBlockWeight = pistonBlockWeight;
         this.hopperBlockWeight = hopperBlockWeight;
         this.observerWeight = observerWeight;
         this.retentionNanos = retentionSeconds * 1_000_000_000L;
         this.activityDecay = Math.max(0.0, Math.min(0.99, activityDecay));
+        this.redstoneSampleRate = Math.max(1, redstoneSampleRate);
         this.redstoneMaterials = new HashSet<>(redstoneMaterials);
     }
 
@@ -76,7 +84,10 @@ public final class LagProfiler {
     }
 
     public void addRedstoneEvent(Chunk chunk) {
-        statsFor(chunk).addRedstoneEvent();
+        int rate = redstoneSampleRate;
+        if (rate <= 1 || redstoneSampleCounter.incrementAndGet() % rate == 0) {
+            statsFor(chunk).addRedstoneEvent(rate);
+        }
     }
 
     public void addPistonEvent(Chunk chunk) {
@@ -107,7 +118,9 @@ public final class LagProfiler {
             ChunkKey key = keys.get((start + i) % keys.size());
             scheduleOnChunkKey(key);
         }
-        cleanupExpired();
+        if (scanRounds.incrementAndGet() % 4 == 0) {
+            cleanupExpired();
+        }
     }
 
     public java.util.Optional<LagSnapshot> find(ChunkKey key) {
@@ -124,7 +137,9 @@ public final class LagProfiler {
                 .filter(entry -> loaded.containsKey(entry.getKey()))
                 .map(entry -> snapshot(entry.getKey(), entry.getValue(), now))
                 .filter(snapshot -> snapshot.ageMillis() <= retentionNanos / 1_000_000L || snapshot.score() > 0.0)
-                .sorted(Comparator.comparingDouble(LagSnapshot::score).reversed())
+                .sorted(Comparator.comparingDouble(LagSnapshot::score).reversed()
+                        .thenComparingInt((LagSnapshot s) -> s.key().x())
+                        .thenComparingInt(s -> s.key().z()))
                 .limit(limit)
                 .toList();
     }
@@ -169,7 +184,18 @@ public final class LagProfiler {
         }
         try {
             World world = chunk.getWorld();
-            int entities = chunk.isEntitiesLoaded() ? chunk.getEntities().length : 0;
+            int livingEntities = 0;
+            int passiveEntities = 0;
+            if (chunk.isEntitiesLoaded()) {
+                for (var entity : chunk.getEntities()) {
+                    if (entity instanceof org.bukkit.entity.Item
+                            || entity instanceof org.bukkit.entity.ExperienceOrb) {
+                        passiveEntities++;
+                    } else {
+                        livingEntities++;
+                    }
+                }
+            }
             var snapshot = chunk.getChunkSnapshot(false, false, false, false);
 
             int redstone = 0;
@@ -204,7 +230,7 @@ public final class LagProfiler {
             }
 
             ChunkStats stat = stats.computeIfAbsent(key, ignored -> new ChunkStats());
-            stat.updateScan(entities, redstone, pistons, hoppers, observers);
+            stat.updateScan(livingEntities, passiveEntities, redstone, pistons, hoppers, observers);
             scans.incrementAndGet();
         } catch (Throwable throwable) {
             plugin.getLogger().fine("Could not scan " + key + ": " + throwable.getClass().getSimpleName());
@@ -217,7 +243,8 @@ public final class LagProfiler {
         long hopperMoves = stat.recentHopperMoves();
 
         double score = stat.rollingActivityScore()
-                + stat.entities() * entityWeight
+                + stat.livingEntities() * livingEntityWeight
+                + stat.passiveEntities() * passiveEntityWeight
                 + stat.redstoneBlocks() * redstoneBlockWeight
                 + stat.pistons() * pistonBlockWeight
                 + stat.hoppers() * hopperBlockWeight
@@ -227,7 +254,8 @@ public final class LagProfiler {
                 ? Long.MAX_VALUE
                 : Math.max(0L, (now - stat.lastScanNanos()) / 1_000_000L);
         return new LagSnapshot(key, score, redstoneEvents, pistonEvents, hopperMoves,
-                stat.entities(), stat.redstoneBlocks(), stat.pistons(), stat.hoppers(), stat.observers(), ageMillis);
+                stat.livingEntities(), stat.passiveEntities(), stat.redstoneBlocks(), stat.pistons(),
+                stat.hoppers(), stat.observers(), ageMillis);
     }
 
     private void cleanupExpired() {
@@ -235,7 +263,8 @@ public final class LagProfiler {
         for (Map.Entry<ChunkKey, ChunkStats> entry : stats.entrySet()) {
             if (!loaded.containsKey(entry.getKey())
                     || (entry.getValue().lastScanNanos() > 0 && entry.getValue().lastScanNanos() < cutoff
-                    && entry.getValue().entities() == 0
+                    && entry.getValue().livingEntities() == 0
+                    && entry.getValue().passiveEntities() == 0
                     && entry.getValue().redstoneBlocks() == 0
                     && entry.getValue().pistons() == 0
                     && entry.getValue().hoppers() == 0

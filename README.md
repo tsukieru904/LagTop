@@ -40,4 +40,9 @@ Chunk sampling is performed on the owning region using Paper/Folia's region sche
 
 Requires Gradle 9.4.1 and Java 21 for the project build. The produced bytecode targets Java 21.
 
-GitHub Actions uploads the resulting `.jar` as the `LagTop-jar` workflow artifact. When you push a tag such as `v1.0.1`, the same `.jar` is also attached directly to a GitHub Release.
+GitHub Actions uploads the resulting `.jar` as the `LagTop-jar` workflow artifact. When you push a tag such as `v1.1.1`, the same `.jar` is also attached directly to a GitHub Release.
+
+## 1.1.1
+
+- Fixed startup failure on Paper/Purpur 26.2 caused by registering the abstract `BlockPistonEvent`.
+- Piston activity is now tracked through `BlockPistonExtendEvent` and `BlockPistonRetractEvent`.

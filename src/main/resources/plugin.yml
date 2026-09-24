@@ -1,0 +1,20 @@
+name: LagTop
+version: '1.1.0'
+main: com.tsukieru.lagtop.LagTopPlugin
+api-version: '1.21'
+folia-supported: true
+author: Tsukieru
+contributors: []
+description: Low-overhead profiler for the most active server chunks.
+commands:
+  lagtop:
+    description: Shows the five highest-activity chunks.
+    usage: /lagtop [gui|scan|reload]
+    permission: lagtop.use
+permissions:
+  lagtop.use:
+    description: Allows viewing LagTop data.
+    default: op
+  lagtop.admin:
+    description: Allows LagTop administration commands.
+    default: op

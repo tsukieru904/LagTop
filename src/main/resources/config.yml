@@ -1,0 +1,59 @@
+# LagTop configuration
+# The score is an estimate. Paper does not expose per-chunk CPU time through the API.
+scan-period-seconds: 15
+chunks-per-scan: 8
+initial-scan-delay-ticks: 20
+activity-decay: 0.5
+retention-seconds: 120
+
+# How much each observed activity contributes to the estimated score.
+weights:
+  redstone-events: 1.0
+  piston-events: 6.0
+  hopper-moves: 3.0
+  entities: 0.20
+  redstone-blocks: 0.03
+  pistons: 0.50
+  hoppers: 0.35
+  observers: 0.35
+
+# Materials counted as redstone components.
+# Names that do not exist on the running server are ignored.
+redstone-materials:
+  - REDSTONE_WIRE
+  - REDSTONE_TORCH
+  - REDSTONE_WALL_TORCH
+  - REDSTONE_BLOCK
+  - REPEATER
+  - COMPARATOR
+  - TARGET
+  - LEVER
+  - STONE_BUTTON
+  - POLISHED_BLACKSTONE_BUTTON
+  - OAK_BUTTON
+  - SPRUCE_BUTTON
+  - BIRCH_BUTTON
+  - JUNGLE_BUTTON
+  - ACACIA_BUTTON
+  - DARK_OAK_BUTTON
+  - CRIMSON_BUTTON
+  - WARPED_BUTTON
+  - MANGROVE_BUTTON
+  - BAMBOO_BUTTON
+  - CHERRY_BUTTON
+  - PALE_OAK_BUTTON
+  - STONE_PRESSURE_PLATE
+  - OAK_PRESSURE_PLATE
+  - SPRUCE_PRESSURE_PLATE
+  - BIRCH_PRESSURE_PLATE
+  - JUNGLE_PRESSURE_PLATE
+  - ACACIA_PRESSURE_PLATE
+  - DARK_OAK_PRESSURE_PLATE
+  - CRIMSON_PRESSURE_PLATE
+  - WARPED_PRESSURE_PLATE
+  - MANGROVE_PRESSURE_PLATE
+  - BAMBOO_PRESSURE_PLATE
+  - CHERRY_PRESSURE_PLATE
+  - PALE_OAK_PRESSURE_PLATE
+  - LIGHT_WEIGHTED_PRESSURE_PLATE
+  - HEAVY_WEIGHTED_PRESSURE_PLATE
